@@ -10,6 +10,14 @@ import org.springframework.security.oauth2.config.annotation.web.configuration.A
 import org.springframework.security.oauth2.config.annotation.web.configuration.EnableAuthorizationServer;
 import org.springframework.security.oauth2.config.annotation.web.configuration.EnableResourceServer;
 import org.springframework.security.oauth2.config.annotation.web.configurers.AuthorizationServerEndpointsConfigurer;
+import org.springframework.security.oauth2.config.annotation.web.configurers.AuthorizationServerSecurityConfigurer;
+import org.springframework.security.oauth2.provider.token.DefaultTokenServices;
+import org.springframework.security.oauth2.provider.token.TokenEnhancer;
+import org.springframework.security.oauth2.provider.token.TokenEnhancerChain;
+import org.springframework.security.oauth2.provider.token.TokenStore;
+import org.springframework.security.oauth2.provider.token.store.JwtAccessTokenConverter;
+
+import java.util.Arrays;
 
 @RequiredArgsConstructor
 @EnableResourceServer
@@ -18,6 +26,16 @@ import org.springframework.security.oauth2.config.annotation.web.configurers.Aut
 public class OAuth2Config extends AuthorizationServerConfigurerAdapter {
     private final AuthenticationManager authenticationManager;
     private final UserDetailsService userDetailsService;
+    //아래는 jwt에서 추가 된 항목
+    private final TokenStore jwtTokenStore;
+    private final DefaultTokenServices tokenServices;
+    private final JwtAccessTokenConverter jwtAccessTokenConverter;
+    private final TokenEnhancer jwtTokenEnhancer;
+
+    @Override
+    public void configure(AuthorizationServerSecurityConfigurer security) throws Exception {
+        security.checkTokenAccess("isAuthenticated()");
+    }
 
     /**
      *
@@ -38,7 +56,19 @@ public class OAuth2Config extends AuthorizationServerConfigurerAdapter {
 
     @Override
     public void configure(AuthorizationServerEndpointsConfigurer endpoints) throws Exception {
-        endpoints.authenticationManager(authenticationManager)
+        //이건 그냥 oauth2
+//        endpoints.authenticationManager(authenticationManager)
+//                .userDetailsService(userDetailsService);
+        //이건 jwt
+        TokenEnhancerChain tokenEnhancerChain = new TokenEnhancerChain();
+        tokenEnhancerChain.setTokenEnhancers(
+                Arrays.asList(jwtTokenEnhancer, jwtAccessTokenConverter)
+        );
+
+        endpoints
+                .tokenStore(jwtTokenStore)
+                .accessTokenConverter(jwtAccessTokenConverter)
+                .authenticationManager(authenticationManager)
                 .userDetailsService(userDetailsService);
     }
 }
